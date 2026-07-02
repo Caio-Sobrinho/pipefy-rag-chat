@@ -3,6 +3,7 @@ from fastapi import Request
 from app.config import Settings, get_settings
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
+from app.services.llm_service import LLMService
 from app.services.redis_service import RedisService
 from app.services.redis_vector_service import RedisVectorService
 from app.services.retriever_service import RetrieverService
@@ -22,6 +23,10 @@ def get_document_service(request: Request) -> DocumentService:
 
 def get_retriever_service(request: Request) -> RetrieverService:
     return request.app.state.retriever_service
+
+
+def get_llm_service(request: Request) -> LLMService:
+    return request.app.state.llm_service
 
 
 def get_chat_service(request: Request) -> ChatService:

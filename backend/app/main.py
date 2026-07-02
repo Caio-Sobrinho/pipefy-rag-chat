@@ -8,6 +8,7 @@ from app.core.exceptions import AppException, app_exception_handler
 from app.routers import chat, documents, health, search, upload
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
+from app.services.llm_service import LLMService
 from app.services.redis_service import RedisService
 from app.services.redis_vector_service import RedisVectorService
 from app.services.retriever_service import RetrieverService
@@ -18,20 +19,30 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
 
     app.state.redis_service = RedisService(settings.redis_url)
+
     app.state.redis_vector_service = RedisVectorService(
         redis_service=app.state.redis_service,
         settings=settings,
     )
+
     app.state.document_service = DocumentService(
         settings=settings,
         redis_vector_service=app.state.redis_vector_service,
     )
+
     app.state.retriever_service = RetrieverService(
         settings=settings,
         document_service=app.state.document_service,
         redis_vector_service=app.state.redis_vector_service,
     )
-    app.state.chat_service = ChatService()
+
+    app.state.llm_service = LLMService(settings=settings)
+
+    app.state.chat_service = ChatService(
+        settings=settings,
+        retriever_service=app.state.retriever_service,
+        llm_service=app.state.llm_service,
+    )
 
     yield
 
@@ -42,7 +53,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.6.0",
+    version="0.7.0",
     debug=settings.debug,
     lifespan=lifespan,
 )

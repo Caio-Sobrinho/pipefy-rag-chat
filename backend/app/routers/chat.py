@@ -13,4 +13,4 @@ async def chat(
     payload: ChatRequest,
     chat_service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
-    return chat_service.answer(payload)
+    return await chat_service.answer(payload)
