@@ -5,6 +5,7 @@ from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
 from app.services.redis_service import RedisService
 from app.services.redis_vector_service import RedisVectorService
+from app.services.retriever_service import RetrieverService
 
 
 def get_redis_service(request: Request) -> RedisService:
@@ -17,6 +18,10 @@ def get_redis_vector_service(request: Request) -> RedisVectorService:
 
 def get_document_service(request: Request) -> DocumentService:
     return request.app.state.document_service
+
+
+def get_retriever_service(request: Request) -> RetrieverService:
+    return request.app.state.retriever_service
 
 
 def get_chat_service(request: Request) -> ChatService:

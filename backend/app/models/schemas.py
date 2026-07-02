@@ -56,3 +56,23 @@ class ChatResponse(BaseModel):
     answer: str
     sources: list[SourceResponse]
     session_id: str
+
+
+class SearchRequest(BaseModel):
+    question: str = Field(..., min_length=1)
+    top_k: int = Field(default=5, ge=1, le=20)
+
+
+class RetrievedChunkResponse(BaseModel):
+    file_id: str
+    source: str
+    chunk_index: int
+    content: str
+    score: float
+    retrieval_mode: str
+
+
+class SearchResponse(BaseModel):
+    question: str
+    top_k: int
+    matches: list[RetrievedChunkResponse]

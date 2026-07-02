@@ -164,6 +164,14 @@ class DocumentService:
 
         return response
 
+    def get_all_chunk_records(self) -> list[dict]:
+        records: list[dict] = []
+
+        for chunk_list in self.chunks.values():
+            records.extend(chunk_list)
+
+        return records
+
     async def delete_document(self, file_id: str) -> tuple[bool, int]:
         document = self.documents.pop(file_id, None)
 
@@ -182,3 +190,4 @@ class DocumentService:
             path.unlink()
 
         return True, redis_vectors_deleted
+    
