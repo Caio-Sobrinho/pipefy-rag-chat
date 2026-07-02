@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.core.dependencies import get_document_service
 from app.models.schemas import (
@@ -22,9 +22,13 @@ async def list_documents(
 @router.get("/documents/{file_id}/chunks", response_model=list[DocumentChunkResponse])
 async def list_document_chunks(
     file_id: str,
+    include_embedding: bool = Query(default=False),
     document_service: DocumentService = Depends(get_document_service),
 ) -> list[DocumentChunkResponse]:
-    return document_service.list_document_chunks(file_id)
+    return document_service.list_document_chunks(
+        file_id=file_id,
+        include_embedding=include_embedding,
+    )
 
 
 @router.delete("/documents/{file_id}", response_model=DeleteDocumentResponse)

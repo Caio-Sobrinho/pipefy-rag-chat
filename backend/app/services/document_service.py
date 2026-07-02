@@ -12,6 +12,7 @@ from app.models.schemas import (
     DocumentResponse,
     UploadResponse,
 )
+from app.services.embedding_service import EmbeddingService
 from app.services.file_loader_service import FileLoaderService
 from app.services.text_splitter_service import TextSplitterService
 
@@ -30,9 +31,13 @@ class DocumentService:
 
         self.file_loader = FileLoaderService()
         self.text_splitter = TextSplitterService()
+        self.embedding_service = EmbeddingService(
+            model_name=settings.embedding_model,
+            expected_dimension=settings.embedding_dimension,
+        )
 
         # Armazenamento temporário em memória.
-        # No Bloco 4, os chunks serão indexados no Redis.
+        # No Bloco 5, esses chunks e embeddings serão indexados no Redis.
         self.documents: dict[str, dict] = {}
         self.chunks: dict[str, list[dict]] = {}
 
@@ -69,6 +74,14 @@ class DocumentService:
             chunk_overlap=self.settings.chunk_overlap,
         )
 
+        embeddings = self.embedding_service.embed_texts(chunks)
+
+        if len(chunks) != len(embeddings):
+            raise AppException(
+                "Chunks and embeddings count mismatch.",
+                status_code=500,
+            )
+
         uploaded_at = datetime.now(timezone.utc)
 
         self.documents[file_id] = {
@@ -86,6 +99,8 @@ class DocumentService:
                 "source": original_name,
                 "chunk_index": index,
                 "content": chunk,
+                "embedding": embeddings[index],
+                "embedding_dimension": len(embeddings[index]),
                 "uploaded_at": uploaded_at,
             }
             for index, chunk in enumerate(chunks)
@@ -95,6 +110,9 @@ class DocumentService:
             file_id=file_id,
             name=original_name,
             chunks_indexed=len(chunks),
+            embeddings_generated=len(embeddings),
+            embedding_model=self.settings.embedding_model,
+            embedding_dimension=self.settings.embedding_dimension,
             status="indexed",
         )
 
@@ -110,19 +128,32 @@ class DocumentService:
             for document in self.documents.values()
         ]
 
-    def list_document_chunks(self, file_id: str) -> list[DocumentChunkResponse]:
+    def list_document_chunks(
+        self,
+        file_id: str,
+        include_embedding: bool = False,
+    ) -> list[DocumentChunkResponse]:
         if file_id not in self.documents:
             raise AppException("Document not found.", status_code=404)
 
-        return [
-            DocumentChunkResponse(
-                file_id=chunk["file_id"],
-                source=chunk["source"],
-                chunk_index=chunk["chunk_index"],
-                content=chunk["content"],
+        response: list[DocumentChunkResponse] = []
+
+        for chunk in self.chunks.get(file_id, []):
+            embedding = chunk.get("embedding")
+
+            response.append(
+                DocumentChunkResponse(
+                    file_id=chunk["file_id"],
+                    source=chunk["source"],
+                    chunk_index=chunk["chunk_index"],
+                    content=chunk["content"],
+                    has_embedding=embedding is not None,
+                    embedding_dimension=chunk.get("embedding_dimension", 0),
+                    embedding=embedding if include_embedding else None,
+                )
             )
-            for chunk in self.chunks.get(file_id, [])
-        ]
+
+        return response
 
     def delete_document(self, file_id: str) -> bool:
         document = self.documents.pop(file_id, None)

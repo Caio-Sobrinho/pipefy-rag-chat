@@ -8,6 +8,9 @@ class UploadResponse(BaseModel):
     file_id: str
     name: str
     chunks_indexed: int
+    embeddings_generated: int
+    embedding_model: str
+    embedding_dimension: int
     status: str
 
 
@@ -24,6 +27,9 @@ class DocumentChunkResponse(BaseModel):
     source: str
     chunk_index: int
     content: str
+    has_embedding: bool
+    embedding_dimension: int
+    embedding: Optional[list[float]] = None
 
 
 class DeleteDocumentResponse(BaseModel):
