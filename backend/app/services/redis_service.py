@@ -10,9 +10,6 @@ logger = logging.getLogger(__name__)
 class RedisService:
     def __init__(self, redis_url: str):
         self.redis_url = redis_url
-
-        # Mantemos decode_responses=False porque futuramente vamos salvar
-        # embeddings em FLOAT32 como bytes no Redis Vector Search.
         self.client: Redis = Redis.from_url(
             redis_url,
             decode_responses=False,
@@ -22,7 +19,7 @@ class RedisService:
         try:
             return bool(await self.client.ping())
         except RedisError:
-            logger.exception("Failed to connect to Redis")
+            logger.warning("Redis is not available at %s", self.redis_url)
             return False
 
     async def close(self) -> None:

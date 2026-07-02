@@ -4,18 +4,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.core.exceptions import AppException, app_exception_handler
-from app.core.logging import configure_logging
 from app.routers import health
 from app.services.redis_service import RedisService
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    configure_logging()
-
     settings = get_settings()
-
     app.state.redis_service = RedisService(settings.redis_url)
 
     yield
@@ -27,8 +22,8 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    debug=settings.debug,
     version="0.1.0",
+    debug=settings.debug,
     lifespan=lifespan,
 )
 
@@ -39,8 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-app.add_exception_handler(AppException, app_exception_handler)
 
 app.include_router(health.router)
 

@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     debug: bool = True
 
     redis_url: str = "redis://localhost:6379"
+    redis_required: bool = False
 
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
@@ -23,7 +24,7 @@ class Settings(BaseSettings):
     top_k: int = 5
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", "../.env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
     )
