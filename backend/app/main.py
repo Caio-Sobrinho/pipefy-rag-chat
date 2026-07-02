@@ -9,6 +9,7 @@ from app.routers import chat, documents, health, upload
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
 from app.services.redis_service import RedisService
+from app.services.redis_vector_service import RedisVectorService
 
 
 @asynccontextmanager
@@ -16,7 +17,14 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
 
     app.state.redis_service = RedisService(settings.redis_url)
-    app.state.document_service = DocumentService(settings=settings)
+    app.state.redis_vector_service = RedisVectorService(
+        redis_service=app.state.redis_service,
+        settings=settings,
+    )
+    app.state.document_service = DocumentService(
+        settings=settings,
+        redis_vector_service=app.state.redis_vector_service,
+    )
     app.state.chat_service = ChatService()
 
     yield
@@ -28,7 +36,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.2.0",
+    version="0.5.0",
     debug=settings.debug,
     lifespan=lifespan,
 )

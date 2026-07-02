@@ -36,9 +36,10 @@ async def delete_document(
     file_id: str,
     document_service: DocumentService = Depends(get_document_service),
 ) -> DeleteDocumentResponse:
-    document_service.delete_document(file_id)
+    deleted, redis_vectors_deleted = await document_service.delete_document(file_id)
 
     return DeleteDocumentResponse(
-        deleted=True,
+        deleted=deleted,
         file_id=file_id,
+        redis_vectors_deleted=redis_vectors_deleted,
     )

@@ -14,6 +14,7 @@ from app.models.schemas import (
 )
 from app.services.embedding_service import EmbeddingService
 from app.services.file_loader_service import FileLoaderService
+from app.services.redis_vector_service import RedisVectorService
 from app.services.text_splitter_service import TextSplitterService
 
 
@@ -23,9 +24,12 @@ class DocumentService:
     def __init__(
         self,
         settings: Settings,
+        redis_vector_service: RedisVectorService,
         upload_dir: str = "storage/uploads",
     ):
         self.settings = settings
+        self.redis_vector_service = redis_vector_service
+
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
@@ -36,8 +40,6 @@ class DocumentService:
             expected_dimension=settings.embedding_dimension,
         )
 
-        # Armazenamento temporário em memória.
-        # No Bloco 5, esses chunks e embeddings serão indexados no Redis.
         self.documents: dict[str, dict] = {}
         self.chunks: dict[str, list[dict]] = {}
 
@@ -84,16 +86,7 @@ class DocumentService:
 
         uploaded_at = datetime.now(timezone.utc)
 
-        self.documents[file_id] = {
-            "file_id": file_id,
-            "name": original_name,
-            "uploaded_at": uploaded_at,
-            "chunks": len(chunks),
-            "status": "indexed",
-            "path": str(stored_path),
-        }
-
-        self.chunks[file_id] = [
+        chunk_records = [
             {
                 "file_id": file_id,
                 "source": original_name,
@@ -106,14 +99,30 @@ class DocumentService:
             for index, chunk in enumerate(chunks)
         ]
 
+        redis_chunks_indexed = await self.redis_vector_service.index_chunks(chunk_records)
+        redis_indexed = redis_chunks_indexed == len(chunk_records)
+
+        self.documents[file_id] = {
+            "file_id": file_id,
+            "name": original_name,
+            "uploaded_at": uploaded_at,
+            "chunks": len(chunks),
+            "status": "indexed" if redis_indexed else "indexed_local",
+            "path": str(stored_path),
+        }
+
+        self.chunks[file_id] = chunk_records
+
         return UploadResponse(
             file_id=file_id,
             name=original_name,
             chunks_indexed=len(chunks),
             embeddings_generated=len(embeddings),
+            redis_chunks_indexed=redis_chunks_indexed,
+            redis_indexed=redis_indexed,
             embedding_model=self.settings.embedding_model,
             embedding_dimension=self.settings.embedding_dimension,
-            status="indexed",
+            status="indexed" if redis_indexed else "indexed_local",
         )
 
     def list_documents(self) -> list[DocumentResponse]:
@@ -155,7 +164,7 @@ class DocumentService:
 
         return response
 
-    def delete_document(self, file_id: str) -> bool:
+    async def delete_document(self, file_id: str) -> tuple[bool, int]:
         document = self.documents.pop(file_id, None)
 
         if document is None:
@@ -163,9 +172,13 @@ class DocumentService:
 
         self.chunks.pop(file_id, None)
 
+        redis_vectors_deleted = await self.redis_vector_service.delete_document_vectors(
+            file_id=file_id,
+        )
+
         path = Path(document["path"])
 
         if path.exists():
             path.unlink()
 
-        return True
+        return True, redis_vectors_deleted

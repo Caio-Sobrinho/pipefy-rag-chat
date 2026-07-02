@@ -9,6 +9,8 @@ class UploadResponse(BaseModel):
     name: str
     chunks_indexed: int
     embeddings_generated: int
+    redis_chunks_indexed: int
+    redis_indexed: bool
     embedding_model: str
     embedding_dimension: int
     status: str
@@ -35,6 +37,7 @@ class DocumentChunkResponse(BaseModel):
 class DeleteDocumentResponse(BaseModel):
     deleted: bool
     file_id: str
+    redis_vectors_deleted: int = 0
 
 
 class SourceResponse(BaseModel):

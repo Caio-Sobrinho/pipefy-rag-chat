@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://localhost:6379"
     redis_required: bool = False
+    redis_index_name: str = "idx:docs"
+    redis_key_prefix: str = "doc:"
 
     cors_origins: str = "http://localhost:3000,http://localhost:5173"
 
