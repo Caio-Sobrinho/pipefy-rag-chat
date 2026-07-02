@@ -5,20 +5,36 @@ from uuid import uuid4
 
 from fastapi import UploadFile
 
+from app.config import Settings
 from app.core.exceptions import AppException
-from app.models.schemas import DocumentResponse, UploadResponse
+from app.models.schemas import (
+    DocumentChunkResponse,
+    DocumentResponse,
+    UploadResponse,
+)
+from app.services.file_loader_service import FileLoaderService
+from app.services.text_splitter_service import TextSplitterService
 
 
 class DocumentService:
     allowed_extensions = {".pdf", ".txt", ".docx"}
 
-    def __init__(self, upload_dir: str = "storage/uploads"):
+    def __init__(
+        self,
+        settings: Settings,
+        upload_dir: str = "storage/uploads",
+    ):
+        self.settings = settings
         self.upload_dir = Path(upload_dir)
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
-        # Banco temporário em memória.
-        # No próximo bloco, isso será substituído/espelhado no Redis.
+        self.file_loader = FileLoaderService()
+        self.text_splitter = TextSplitterService()
+
+        # Armazenamento temporário em memória.
+        # No Bloco 4, os chunks serão indexados no Redis.
         self.documents: dict[str, dict] = {}
+        self.chunks: dict[str, list[dict]] = {}
 
     async def save_uploaded_file(self, file: UploadFile) -> UploadResponse:
         if not file.filename:
@@ -45,22 +61,41 @@ class DocumentService:
         finally:
             await file.close()
 
+        text = self.file_loader.load_text(str(stored_path))
+
+        chunks = self.text_splitter.split_text(
+            text=text,
+            chunk_size=self.settings.chunk_size,
+            chunk_overlap=self.settings.chunk_overlap,
+        )
+
         uploaded_at = datetime.now(timezone.utc)
 
         self.documents[file_id] = {
             "file_id": file_id,
             "name": original_name,
             "uploaded_at": uploaded_at,
-            "chunks": 0,
-            "status": "uploaded",
+            "chunks": len(chunks),
+            "status": "indexed",
             "path": str(stored_path),
         }
+
+        self.chunks[file_id] = [
+            {
+                "file_id": file_id,
+                "source": original_name,
+                "chunk_index": index,
+                "content": chunk,
+                "uploaded_at": uploaded_at,
+            }
+            for index, chunk in enumerate(chunks)
+        ]
 
         return UploadResponse(
             file_id=file_id,
             name=original_name,
-            chunks_indexed=0,
-            status="uploaded",
+            chunks_indexed=len(chunks),
+            status="indexed",
         )
 
     def list_documents(self) -> list[DocumentResponse]:
@@ -75,11 +110,27 @@ class DocumentService:
             for document in self.documents.values()
         ]
 
+    def list_document_chunks(self, file_id: str) -> list[DocumentChunkResponse]:
+        if file_id not in self.documents:
+            raise AppException("Document not found.", status_code=404)
+
+        return [
+            DocumentChunkResponse(
+                file_id=chunk["file_id"],
+                source=chunk["source"],
+                chunk_index=chunk["chunk_index"],
+                content=chunk["content"],
+            )
+            for chunk in self.chunks.get(file_id, [])
+        ]
+
     def delete_document(self, file_id: str) -> bool:
         document = self.documents.pop(file_id, None)
 
         if document is None:
             raise AppException("Document not found.", status_code=404)
+
+        self.chunks.pop(file_id, None)
 
         path = Path(document["path"])
 

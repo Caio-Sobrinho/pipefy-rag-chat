@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
 
     app.state.redis_service = RedisService(settings.redis_url)
-    app.state.document_service = DocumentService()
+    app.state.document_service = DocumentService(settings=settings)
     app.state.chat_service = ChatService()
 
     yield

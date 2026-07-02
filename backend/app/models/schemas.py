@@ -19,6 +19,13 @@ class DocumentResponse(BaseModel):
     status: str
 
 
+class DocumentChunkResponse(BaseModel):
+    file_id: str
+    source: str
+    chunk_index: int
+    content: str
+
+
 class DeleteDocumentResponse(BaseModel):
     deleted: bool
     file_id: str
