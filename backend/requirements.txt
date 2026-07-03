@@ -10,3 +10,5 @@ sentence-transformers
 numpy
 httpx
 langgraph
+pytest
+pytest-cov
