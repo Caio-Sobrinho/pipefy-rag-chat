@@ -1,0 +1,1 @@
+A Pipefy é uma plataforma de automação de processos. O time de Data e AI trabalha com inteligência artificial, dados, RAG, modelos de linguagem e busca semântica.
