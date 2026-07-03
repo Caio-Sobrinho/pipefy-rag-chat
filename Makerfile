@@ -1,0 +1,19 @@
+.PHONY: up down logs test backend frontend
+
+up:
+	docker compose up --build
+
+down:
+	docker compose down
+
+logs:
+	docker compose logs -f
+
+test:
+	cd backend && pytest --cov=app --cov-report=term-missing
+
+backend:
+	cd backend && uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8000
+
+frontend:
+	cd frontend && npm run dev

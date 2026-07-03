@@ -13,6 +13,14 @@ services:
       timeout: 5s
       retries: 5
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: pipefy-rag-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
   api:
     build:
       context: ./backend
@@ -24,9 +32,15 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379
+      OLLAMA_BASE_URL: http://ollama:11434
+    volumes:
+      - uploads_data:/app/storage/uploads
+      - model_cache:/models
     depends_on:
       redis:
         condition: service_healthy
+      ollama:
+        condition: service_started
     healthcheck:
       test:
         [
@@ -35,9 +49,25 @@ services:
           "-c",
           "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')",
         ]
-      interval: 10s
-      timeout: 5s
+      interval: 20s
+      timeout: 10s
       retries: 5
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
+    container_name: pipefy-rag-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      api:
+        condition: service_started
 
 volumes:
   redis_data:
+  ollama_data:
+  uploads_data:
+  model_cache:
