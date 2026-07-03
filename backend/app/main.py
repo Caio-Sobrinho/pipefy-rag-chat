@@ -9,6 +9,7 @@ from app.routers import chat, documents, health, search, upload
 from app.services.chat_service import ChatService
 from app.services.document_service import DocumentService
 from app.services.llm_service import LLMService
+from app.services.rag_graph_service import RagGraphService
 from app.services.redis_service import RedisService
 from app.services.redis_vector_service import RedisVectorService
 from app.services.retriever_service import RetrieverService
@@ -38,10 +39,14 @@ async def lifespan(app: FastAPI):
 
     app.state.llm_service = LLMService(settings=settings)
 
-    app.state.chat_service = ChatService(
+    app.state.rag_graph_service = RagGraphService(
         settings=settings,
         retriever_service=app.state.retriever_service,
         llm_service=app.state.llm_service,
+    )
+
+    app.state.chat_service = ChatService(
+        rag_graph_service=app.state.rag_graph_service,
     )
 
     yield
@@ -53,7 +58,7 @@ settings = get_settings()
 
 app = FastAPI(
     title=settings.app_name,
-    version="0.7.0",
+    version="0.8.0",
     debug=settings.debug,
     lifespan=lifespan,
 )
@@ -81,4 +86,5 @@ async def root() -> dict[str, str]:
         "message": "Pipefy RAG Chat API",
         "docs": "/docs",
         "health": "/health",
+        "rag_orchestration": "LangGraph",
     }
