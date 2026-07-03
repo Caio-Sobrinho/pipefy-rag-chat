@@ -1,5 +1,7 @@
 # Pipefy RAG Chat
 
+Case técnico para a vaga **Software Engineer Pleno — Data & AI (Generalista)**.
+
 A aplicação permite o upload de documentos e interação via chat utilizando uma arquitetura **RAG — Retrieval-Augmented Generation** com busca semântica, embeddings open-source, Redis Vector Search, FastAPI, LangGraph e React.
 
 ---
@@ -115,23 +117,27 @@ Cada nó possui uma responsabilidade clara:
 
 ## Rodando com Docker Compose
 
-Crie o arquivo `.env` a partir do exemplo:
+O projeto foi configurado para rodar com um único comando, sem necessidade obrigatória de criar `.env` antes.
+
+Na raiz do projeto, execute:
 
 ```bash
-cp .env.example .env
+docker-compose up --build
 ```
 
-No Windows PowerShell:
-
-```powershell
-copy .env.example .env
-```
-
-Depois suba os serviços:
+Ou, em versões mais novas do Docker:
 
 ```bash
 docker compose up --build
 ```
+
+Esse comando sobe os seguintes serviços:
+
+- API FastAPI
+- Frontend React
+- Redis Stack com RedisInsight
+- Ollama
+- Serviço auxiliar para baixar o modelo `llama3.1:8b`
 
 Serviços disponíveis:
 
@@ -143,13 +149,27 @@ Serviços disponíveis:
 | RedisInsight | http://localhost:8001 |
 | Ollama | http://localhost:11434 |
 
-Para baixar o modelo do Ollama:
+Na primeira execução, o Docker pode levar alguns minutos para baixar as imagens, instalar dependências Python/Node e baixar o modelo `llama3.1:8b` no Ollama.
+
+> Importante: caso o modelo do Ollama ainda não esteja pronto no primeiro teste, a API continua funcionando com fallback local baseado no trecho mais relevante recuperado pelo pipeline RAG.
+
+---
+
+## Configuração opcional com `.env`
+
+O arquivo `.env` não é obrigatório para rodar o projeto com Docker Compose, pois o `docker-compose.yml` já possui valores padrão.
+
+Mesmo assim, caso queira customizar as variáveis, crie um `.env` a partir do exemplo:
 
 ```bash
-docker compose exec ollama ollama pull llama3.1:8b
+cp .env.example .env
 ```
 
-> Importante: caso o modelo do Ollama ainda não esteja disponível, a API continua respondendo com fallback local baseado no trecho mais relevante recuperado pelo pipeline RAG.
+No Windows PowerShell:
+
+```powershell
+copy .env.example .env
+```
 
 ---
 
@@ -210,10 +230,14 @@ http://localhost:5173
 
 | Variável | Descrição |
 |---|---|
+| `APP_NAME` | Nome da aplicação backend |
+| `APP_ENV` | Ambiente de execução |
+| `DEBUG` | Ativa ou desativa modo debug |
 | `REDIS_URL` | URL de conexão com Redis |
 | `REDIS_REQUIRED` | Define se Redis é obrigatório para a API funcionar |
 | `REDIS_INDEX_NAME` | Nome do índice vetorial no Redis |
 | `REDIS_KEY_PREFIX` | Prefixo das chaves salvas no Redis |
+| `CORS_ORIGINS` | Origens permitidas para CORS |
 | `EMBEDDING_MODEL` | Modelo usado para gerar embeddings |
 | `EMBEDDING_DIMENSION` | Dimensão dos vetores de embedding |
 | `OLLAMA_BASE_URL` | URL do serviço Ollama |
@@ -304,6 +328,7 @@ Workflow:
 - Testes automatizados com mocks.
 - GitHub Actions.
 - Docker Compose com API, frontend, Redis e Ollama.
+- Execução do projeto completo com um único comando: `docker-compose up --build`.
 
 ---
 
@@ -339,6 +364,7 @@ Esse fallback facilita o desenvolvimento local sem comprometer a arquitetura fin
 - O modelo local via Ollama reduz custo, mas pode ter performance inferior a modelos hospedados como GPT-4o ou Claude.
 - Redis foi usado como vector store, mas metadados mais ricos poderiam ser persistidos em banco relacional.
 - Streaming de resposta ainda não foi implementado, mas a arquitetura permite adicionar SSE ou WebSocket futuramente.
+- O download inicial do modelo local pode tornar a primeira execução do Docker mais demorada.
 
 ---
 

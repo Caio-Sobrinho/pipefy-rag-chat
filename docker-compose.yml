@@ -21,6 +21,23 @@ services:
     volumes:
       - ollama_data:/root/.ollama
 
+  ollama-pull:
+    image: ollama/ollama:latest
+    container_name: pipefy-rag-ollama-pull
+    depends_on:
+      ollama:
+        condition: service_started
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "until ollama list >/dev/null 2>&1; do
+        echo 'Waiting for Ollama...';
+        sleep 3;
+      done;
+      ollama pull ${OLLAMA_MODEL:-llama3.1:8b} || true"
+    restart: "no"
+
   api:
     build:
       context: ./backend
@@ -28,11 +45,27 @@ services:
     container_name: pipefy-rag-api
     ports:
       - "8000:8000"
-    env_file:
-      - .env
     environment:
-      REDIS_URL: redis://redis:6379
-      OLLAMA_BASE_URL: http://ollama:11434
+      APP_NAME: ${APP_NAME:-Pipefy RAG Chat API}
+      APP_ENV: ${APP_ENV:-docker}
+      DEBUG: ${DEBUG:-true}
+
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      REDIS_REQUIRED: ${REDIS_REQUIRED:-false}
+      REDIS_INDEX_NAME: ${REDIS_INDEX_NAME:-idx:docs}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-doc:}
+
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-384}
+
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3.1:8b}
+
+      CHUNK_SIZE: ${CHUNK_SIZE:-500}
+      CHUNK_OVERLAP: ${CHUNK_OVERLAP:-50}
+      TOP_K: ${TOP_K:-5}
     volumes:
       - uploads_data:/app/storage/uploads
       - model_cache:/models
@@ -58,7 +91,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: http://localhost:8000
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
     container_name: pipefy-rag-frontend
     ports:
       - "3000:80"
