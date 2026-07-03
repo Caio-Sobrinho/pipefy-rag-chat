@@ -1,0 +1,3 @@
+A Pipefy é uma plataforma de automação de processos.
+O time de Data & AI trabalha com inteligência artificial, dados, RAG e modelos de linguagem.
+O objetivo do projeto é construir um chat com documentos usando FastAPI, Redis e React.
