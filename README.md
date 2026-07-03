@@ -1,7 +1,5 @@
 # Pipefy RAG Chat
 
-Case técnico para a vaga **Software Engineer Pleno — Data & AI (Generalista)**.
-
 A aplicação permite o upload de documentos e interação via chat utilizando uma arquitetura **RAG — Retrieval-Augmented Generation** com busca semântica, embeddings open-source, Redis Vector Search, FastAPI, LangGraph e React.
 
 ---
